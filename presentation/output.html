@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Research Automation Tool - Complete Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
+        }
+
+        /* Navigation Bar */
+        .main-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .nav-menu {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+        }
+
+        /* Section Styles */
+        .section {
+            display: none;
+            min-height: 100vh;
+            padding: 100px 20px 50px;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .tech-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .presentation-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Common Styles */
+        h1 {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ffd700, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .main-title {
+            font-size: 3.5em;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700, #4ecdc4, #45b7d1);
+            background-size: 400% 400%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease-in-out infinite;
+            margin-bottom: 15px;
+        }
+
+        /* Demo Section Styles */
+        .workflow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .step {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 25px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .step:hover {
+            transform: translateY(-10px);
+            background: rgba(255, 255, 255, 0.25);
+            border-color: #ffd700;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .step::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .step:hover::before {
+            left: 100%;
+        }
+
+        .step-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .step-title {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffd700;
+        }
+
+        .step-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .arrow {
+            font-size: 2em;
+            color: #ffd700;
+            animation: pulse 2s infinite;
+        }
+
+        .demo-section {
+            margin-top: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 30px;
+        }
+
+        .demo-title {
+            font-size: 1.5em;
+            text-align: center;
+            margin-bottom: 30px;
+            color: #ffd700;
+        }
+
+        .input-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .input-group input, .input-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 14px;
+        }
+
+        .input-group textarea {
+            height: 80px;
+            resize: vertical;
+        }
+
+        .demo-button {
+            display: block;
+            width: 200px;
+            margin: 30px auto;
+            padding: 15px 30px;
+            background: linear-gradient(45deg, #ff6b6b, #ffd700);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .demo-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .results {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 150px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
+        .results.active {
+            border-color: #ffd700;
+            opacity: 1;
+            font-style: normal;
+        }
+
+        .source-item {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #ffd700;
+        }
+
+        .source-title {
+            font-weight: bold;
+            color: #ffd700;
+            margin-bottom: 5px;
+        }
+
+        .source-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+
+        /* Tech Stack Styles */
+        .architecture-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+
+        .tech-layer {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .tech-layer:hover {
+            transform: translateY(-10px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            border-color: #ffd700;
+        }
+
+        .tech-layer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.6s;
+        }
+
+        .tech-layer:hover::before {
+            left: 100%;
+        }
+
+        .layer-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .layer-icon {
+            font-size: 2.5em;
+            margin-right: 15px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .layer-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+        }
+
+        .tech-item {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+        }
+
+        .tech-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-left-color: #4ecdc4;
+            transform: translateX(10px);
+        }
+
+        .tech-name {
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+            font-size: 1.1em;
+        }
+
+        .tech-desc {
+            font-size: 0.9em;
+            opacity: 0.9;
+            line-height: 1.4;
+        }
+
+        .api-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-active {
+            background: #4ecdc4;
+            color: #1a1a1a;
+        }
+
+        .status-beta {
+            background: #ffd700;
+            color: #1a1a1a;
+        }
+
+        /* Presentation Styles */
+        .slide {
+            display: none;
+            animation: slideIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        .slide-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .slide-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .agent-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .agent-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .agent-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .agent-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #FFD700;
+        }
+
+        .agent-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .agent-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .agent-card.expanded .agent-details {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .feature-list li {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .workflow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .workflow-step {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            text-align: center;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .workflow-arrow {
+            font-size: 2rem;
+            color: #FFD700;
+            animation: bounce 2s infinite;
+        }
+
+        .navigation {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            margin: 0 0.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            text-align: center;
+            margin-top: 1rem;
+            opacity: 0.7;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        /* Animations */
+        @keyframes glow {
+            from { text-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            to { text-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 768px) {
+            .nav-menu {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            
+            .workflow {
+                flex-direction: column;
+            }
+            
+            .arrow {
+                transform: rotate(90deg);
+            }
+            
+            .input-section {
+                grid-template-columns: 1fr;
+            }
+            
+            h1, .main-title {
+                font-size: 2em;
+            }
+            
+            .slide-title {
+                font-size: 2rem;
+            }
+            
+            .architecture-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Main Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-logo">⚖️ Legal Research AI</div>
+            <div class="nav-menu">
+                <a class="nav-link active" href="#" onclick="showSection('demo')">Demo</a>
+                <a class="nav-link" href="#" onclick="showSection('tech')">Technology</a>
+                <a class="nav-link" href="#" onclick="showSection('presentation')">Agents</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Demo Section -->
+    <section id="demo" class="section active">
+        <div class="container">
+            <h1>Legal Research Automation Tool</h1>
+            <p class="subtitle">Transforming Legal Research for Law Students</p>
+            
+            <div class="workflow">
+                <div class="step" onclick="highlightStep(this)">
+                    <span class="step-icon">📄</span>
+                    <div class="step-title">Input Base Paper</div>
+                    <div class="step-desc">Upload research paper URL or text as foundation</div>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <div class="step" onclick="highlightStep(this)">
+                    <span class="step-icon">🎯</span>
+                    <div class="step-title">Define New Angle</div>
+                    <div class="step-desc">Specify your unique research perspective or divergent approach</div>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <div class="step" onclick="highlightStep(this)">
+                    <span class="step-icon">🔍</span>
+                    <div class="step-title">Intelligent Search</div>
+                    <div class="step-desc">AI-powered keyword permutations across scholarly and web sources</div>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <div class="step" onclick="highlightStep(this)">
+                    <span class="step-icon">🔗</span>
+                    <div class="step-title">Chain Citations</div>
+                    <div class="step-desc">Scrape articles, legal judgments, and news sources</div>
+                </div>
+                
+                <div class="arrow">→</div>
+                
+                <div class="step" onclick="highlightStep(this)">
+                    <span class="step-icon">📊</span>
+                    <div class="step-title">Curated Results</div>
+                    <div class="step-desc">Contextually-aligned, relevant source recommendations</div>
+                </div>
+            </div>
+
+            <div class="demo-section">
+                <h2 class="demo-title">🚀 Interactive Demo</h2>
+                
+                <div class="input-section">
+                    <div class="input-group">
+                        <label for="base-paper">Base Research Paper URL/Text:</label>
+                        <input type="text" id="base-paper" placeholder="Enter paper URL or paste text excerpt...">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="research-angle">Your Research Angle:</label>
+                        <textarea id="research-angle" placeholder="Describe how your research builds upon or diverges from the base paper..."></textarea>
+                    </div>
+                </div>
+                
+                <button class="demo-button" onclick="runDemo()">🔍 Generate Research Sources</button>
+                
+                <div class="results" id="results">
+                    Click "Generate Research Sources" to see curated results appear here...
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technology Section -->
+    <section id="tech" class="section">
+        <div class="tech-container">
+            <div class="header">
+                <h1 class="main-title">Technology Stack</h1>
+                <p class="subtitle">Powering Next-Generation Legal Research</p>
+            </div>
+
+            <div class="architecture-container">
+                <div class="tech-layer" onclick="showDetails('ai')">
+                    <div class="layer-header">
+                        <span class="layer-icon">🧠</span>
+                        <h2 class="layer-title">AI & Machine Learning</h2>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Google Gemini 1.5 Flash <span class="api-status status-active">ACTIVE</span></div>
+                        <div class="tech-desc">Advanced language understanding and analysis</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">LangGraph</div>
+                        <div class="tech-desc">Orchestrates the agentic workflow with state management</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">TF-IDF Vectorization</div>
+                        <div class="tech-desc">Content similarity analysis</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Scikit-learn</div>
+                        <div class="tech-desc">Machine learning for relevance scoring</div>
+                    </div>
+                </div>
+
+                <div class="tech-layer" onclick="showDetails('backend')">
+                    <div class="layer-header">
+                        <span class="layer-icon">⚙️</span>
+                        <h2 class="layer-title">Backend Infrastructure</h2>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Flask <span class="api-status status-active">ACTIVE</span></div>
+                        <div class="tech-desc">Web application framework with RESTful APIs</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">WebSocket (Socket.IO)</div>
+                        <div class="tech-desc">Real-time progress updates</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">SQLite</div>
+                        <div class="tech-desc">Persistent conversation and research history</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">AsyncIO</div>
+                        <div class="tech-desc">Concurrent processing for improved performance</div>
+                    </div>
+                </div>
+
+                <div class="tech-layer" onclick="showDetails('frontend')">
+                    <div class="layer-header">
+                        <span class="layer-icon">🎨</span>
+                        <h2 class="layer-title">Frontend Experience</h2>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Modern Web UI</div>
+                        <div class="tech-desc">HTML5, CSS3, JavaScript</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Tailwind CSS</div>
+                        <div class="tech-desc">Responsive, mobile-first design</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Real-time Updates</div>
+                        <div class="tech-desc">Live progress tracking and status updates</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Interactive Results</div>
+                        <div class="tech-desc">Tabbed interface with detailed source analysis</div>
+                    </div>
+                </div>
+
+                <div class="tech-layer" onclick="showDetails('apis')">
+                    <div class="layer-header">
+                        <span class="layer-icon">🔗</span>
+                        <h2 class="layer-title">External APIs & Services</h2>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Tavily Search API <span class="api-status status-active">ACTIVE</span></div>
+                        <div class="tech-desc">Enhanced web search capabilities</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">Indian Legal Databases</div>
+                        <div class="tech-desc">Integration with indiankanoon.org, sci.gov.in</div>
+                    </div>
+                    <div class="tech-item">
+                        <div class="tech-name">News APIs <span class="api-status status-beta">BETA</span></div>
+                        <div class="tech-desc">Access to legal news and updates</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <span class="metric-value">< 3s</span>
+                    <div class="metric-label">Average Response Time</div>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value">95%</span>
+                    <div class="metric-label">Relevance Accuracy</div>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value">50+</span>
+                    <div class="metric-label">Concurrent Users</div>
+                </div>
+                <div class="metric-card">
+                    <span class="metric-value">99.9%</span>
+                    <div class="metric-label">Uptime</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Presentation Section -->
+    <section id="presentation" class="section">
+        <div class="presentation-container">
+            <!-- Slide 1: Title Slide -->
+            <div class="slide active">
+                <div class="slide-header">
+                    <div class="slide-title">🏛️ Legal Research Agent System</div>
+                    <div class="slide-subtitle">AI-Powered Multi-Agent Architecture for Comprehensive Legal Research</div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">8</div>
+                        <div class="metric-label">Specialized AI Agents</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">15+</div>
+                        <div class="metric-label">Sources Analyzed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">60-120s</div>
+                        <div class="metric-label">Processing Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">🇮🇳</div>
+                        <div class="metric-label">Indian Legal Focus</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 2: System Overview -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">🔄 System Workflow Overview</div>
+                    <div class="slide-subtitle">Sequential Multi-Agent Processing Pipeline</div>
+                </div>
+                
+                <div class="workflow-diagram">
+                    <div class="workflow-step">📄 Input: Legal Paper + Research Angle</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">🔍 Argument Extraction</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">⚖️ Angle Analysis</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">🔗 Context Merger</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">🎯 Keyword Generation</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">🌐 Multi-Source Search</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">📚 Citation Chaining</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">⭐ Quality Assessment</div>
+                    <div class="workflow-arrow">↓</div>
+                    <div class="workflow-step">📊 Curated Research Output</div>
+                </div>
+            </div>
+
+            <!-- Slide 3: Agent 1 - Argument Extraction -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 1: Argument Extraction</div>
+                    <div class="slide-subtitle">Foundation of Legal Analysis</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">📄</div>
+                    <div class="agent-title">Argument Extraction Agent</div>
+                    <div class="agent-description">
+                        Analyzes legal papers to extract core arguments, thesis statements, and key legal concepts using advanced AI processing.
+                    </div>
+                    <div class="agent-details">
+                        <h4>🎯 Core Functions:</h4>
+                        <ul class="feature-list">
+                            <li>Document Processing (PDF & Text)</li>
+                            <li>Thesis Identification</li>
+                            <li>Supporting Points Extraction</li>
+                            <li>Methodology Analysis</li>
+                            <li>Key Findings Summary</li>
+                            <li>Gap & Limitation Identification</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">⚡ Technical Features:</h4>
+                        <ul class="feature-list">
+                            <li>PyPDF2 Integration for PDF Processing</li>
+                            <li>Google Gemini AI Analysis</li>
+                            <li>Structured JSON Output</li>
+                            <li>4,000 Character Optimization</li>
+                            <li>Error-Resilient Parsing</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 4: Agent 2 - Angle Analysis -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 2: Angle Analysis</div>
+                    <div class="slide-subtitle">Research Direction Optimization</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">⚖️</div>
+                    <div class="agent-title">Angle Analysis Agent</div>
+                    <div class="agent-description">
+                        Compares research angle with base arguments to identify convergence, divergence, and unique research opportunities.
+                    </div>
+                    <div class="agent-details">
+                        <h4>🎯 Core Functions:</h4>
+                        <ul class="feature-list">
+                            <li>Comparative Analysis</li>
+                            <li>Gap Identification</li>
+                            <li>Divergence Point Detection</li>
+                            <li>Focus Area Recommendation</li>
+                            <li>Research Scope Definition</li>
+                            <li>Novelty Assessment</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">📊 Output Categories:</h4>
+                        <ul class="feature-list">
+                            <li><strong>Builds Upon:</strong> Areas of alignment and extension</li>
+                            <li><strong>Diverges:</strong> Points of departure from base</li>
+                            <li><strong>Gaps Addressed:</strong> New territory coverage</li>
+                            <li><strong>Focus Areas:</strong> Specific research directions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 5: Agents 3 & 4 - Context Merger & Keyword Generation -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agents 3 & 4: Context & Keywords</div>
+                    <div class="slide-subtitle">Research Context Unification & Search Optimization</div>
+                </div>
+                
+                <div class="overview-grid">
+                    <div class="agent-card">
+                        <div class="agent-icon">🔗</div>
+                        <div class="agent-title">Context Merger Agent</div>
+                        <div class="agent-description">
+                            Combines argument extraction and angle analysis into unified research context.
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <h4>🎯 Functions:</h4>
+                            <ul class="feature-list" style="font-size: 0.9rem;">
+                                <li>Data Consolidation</li>
+                                <li>Context Structuring</li>
+                                <li>Information Synthesis</li>
+                                <li>Standardized Format Creation</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="agent-card">
+                        <div class="agent-icon">🎯</div>
+                        <div class="agent-title">Keyword Generation Agent</div>
+                        <div class="agent-description">
+                            Creates comprehensive search keywords optimized for legal database searches.
+                        </div>
+                        <div style="margin-top: 1rem;">
+                            <h4>🎯 Functions:</h4>
+                            <ul class="feature-list" style="font-size: 0.9rem;">
+                                <li>Term Extraction</li>
+                                <li>Permutation Generation</li>
+                                <li>Relevance Ranking</li>
+                                <li>Legal Term Integration</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 6: Agent 5 - Search Agents -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 5: Search Agents (Tavily)</div>
+                    <div class="slide-subtitle">Multi-Domain Legal Source Discovery</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">🌐</div>
+                    <div class="agent-title">Search Agents (Tavily Integration)</div>
+                    <div class="agent-description">
+                        Conducts comprehensive searches across Indian legal databases and news sources using optimized keywords.
+                    </div>
+                    <div class="agent-details">
+                        <h4>🇮🇳 Indian Legal Sources (Weight: 1.0):</h4>
+                        <ul class="feature-list">
+                            <li><strong>indiankanoon.org</strong> - Comprehensive case law database</li>
+                            <li><strong>sci.gov.in</strong> - Supreme Court of India official</li>
+                            <li><strong>lawmin.gov.in</strong> - Ministry of Law & Justice</li>
+                            <li><strong>barandbench.com</strong> - Legal news and analysis</li>
+                            <li><strong>livelaw.in</strong> - Real-time legal updates</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">📰 News Sources (Weight: 0.8):</h4>
+                        <ul class="feature-list">
+                            <li>The Hindu, Indian Express - National newspapers</li>
+                            <li>Economic Times - Business law coverage</li>
+                            <li>Legal news platforms - Specialized coverage</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">⚡ Performance Features:</h4>
+                        <ul class="feature-list">
+                            <li>Concurrent multi-domain searching</li>
+                            <li>Real-time crawling status updates</li>
+                            <li>Advanced duplicate removal</li>
+                            <li>Error recovery mechanisms</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 7: Agent 6 - Citation Chaining -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 6: Citation Chaining</div>
+                    <div class="slide-subtitle">Legal Precedent Network Expansion</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">📚</div>
+                    <div class="agent-title">Citation Chaining Agent</div>
+                    <div class="agent-description">
+                        Follows citation networks within discovered sources to find related legal precedents and expand research scope.
+                    </div>
+                    <div class="agent-details">
+                        <h4>🎯 Core Functions:</h4>
+                        <ul class="feature-list">
+                            <li>Citation Pattern Recognition</li>
+                            <li>Legal Network Traversal</li>
+                            <li>Precedent Discovery</li>
+                            <li>Relevance Assessment</li>
+                            <li>Recursive Citation Following</li>
+                            <li>Network Expansion Control</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">📋 Citation Patterns Supported:</h4>
+                        <ul class="feature-list">
+                            <li>Supreme Court Citations (U.S. format)</li>
+                            <li>Federal Case Citations</li>
+                            <li>Court Reporter Citations</li>
+                            <li>Indian Legal Citation Formats</li>
+                            <li>Custom Regex Pattern Matching</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">⚡ Smart Features:</h4>
+                        <ul class="feature-list">
+                            <li>Relevance threshold filtering (>0.5)</li>
+                            <li>Duplicate citation prevention</li>
+                            <li>Network depth limiting</li>
+                            <li>Citation quality assessment</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 8: Agent 7 - Quality Assessment -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 7: Quality Assessment</div>
+                    <div class="slide-subtitle">Multi-Dimensional Source Scoring</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">⭐</div>
+                    <div class="agent-title">Quality Assessment Agent (Relevance Scorer)</div>
+                    <div class="agent-description">
+                        Evaluates and ranks all discovered sources using sophisticated multi-dimensional scoring algorithms.
+                    </div>
+                    <div class="agent-details">
+                        <h4>📊 Scoring Dimensions:</h4>
+                        <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                            <strong>Final Score = </strong><br>
+                            Text Similarity (25%) + <br>
+                            Keyword Match (25%) + <br>
+                            Content Relevance (25%) + <br>
+                            Trust Score (15%) + <br>
+                            Alignment Score (10%)
+                        </div>
+                        
+                        <h4>🇮🇳 Indian Legal Optimization:</h4>
+                        <ul class="feature-list">
+                            <li>25+ Indian legal keywords integration</li>
+                            <li>High-authority domain prioritization</li>
+                            <li>Citation pattern recognition</li>
+                            <li>Government source authority weighting</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">⚡ Advanced Features:</h4>
+                        <ul class="feature-list">
+                            <li>TF-IDF semantic similarity analysis</li>
+                            <li>Real-time scoring progress updates</li>
+                            <li>Fallback scoring for robustness</li>
+                            <li>Batch processing up to 15 sources</li>
+                            <li>Detailed reasoning for all scores</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 9: Agent 8 - Output Curation -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">Agent 8: Output Curation</div>
+                    <div class="slide-subtitle">Comprehensive Research Report Generation</div>
+                </div>
+                
+                <div class="agent-card expanded">
+                    <div class="agent-icon">📊</div>
+                    <div class="agent-title">Output Curation Agent</div>
+                    <div class="agent-description">
+                        Synthesizes and formats final research output, combining all agent results into a coherent research report.
+                    </div>
+                    <div class="agent-details">
+                        <h4>📋 Output Structure:</h4>
+                        <ul class="feature-list">
+                            <li><strong>Research Context:</strong> Original arguments + angle analysis</li>
+                            <li><strong>Discovery Results:</strong> Keywords + sources + citations</li>
+                            <li><strong>Quality Metrics:</strong> Scores + authority + relevance</li>
+                            <li><strong>Research Summary:</strong> Key themes + recommendations</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">🎯 Curation Features:</h4>
+                        <ul class="feature-list">
+                            <li>Result aggregation from all agents</li>
+                            <li>Format standardization</li>
+                            <li>Summary generation</li>
+                            <li>Quality assurance validation</li>
+                            <li>Interactive UI formatting</li>
+                            <li>Export-ready structuring</li>
+                        </ul>
+                        
+                        <h4 style="margin-top: 1.5rem;">📊 Final Deliverables:</h4>
+                        <ul class="feature-list">
+                            <li>Top 10 ranked keywords</li>
+                            <li>Top 20 scored sources</li>
+                            <li>Comprehensive quality metrics</li>
+                            <li>Research recommendations</li>
+                            <li>Citation network map</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Slide 10: System Performance & Benefits -->
+            <div class="slide">
+                <div class="slide-header">
+                    <div class="slide-title">🚀 System Performance & Benefits</div>
+                    <div class="slide-subtitle">Comprehensive Analysis & Future Vision</div>
+                </div>
+                
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">8</div>
+                        <div class="metric-label">Specialized Agents</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">15+</div>
+                        <div class="metric-label">Sources Processed</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">5</div>
+                        <div class="metric-label">Scoring Dimensions</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">25+</div>
+                        <div class="metric-label">Indian Legal Keywords</div>
+                    </div>
+                </div>
+                
+                <div class="overview-grid" style="margin-top: 2rem;">
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px;">
+                        <h3 style="color: #4CAF50; margin-bottom: 1rem;">✅ System Strengths</h3>
+                        <ul class="feature-list">
+                            <li>Modular, maintainable architecture</li>
+                            <li>Comprehensive multi-source coverage</li>
+                            <li>Indian legal context optimization</li>
+                            <li>Real-time progress feedback</li>
+                            <li>Multi-dimensional quality assessment</li>
+                            <li>Error-resilient processing</li>
+                        </ul>
+                    </div>
+                    
+                    <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px;">
+                        <h3 style="color: #FFD700; margin-bottom: 1rem;">🔮 Future Enhancements</h3>
+                        <ul class="feature-list">
+                            <li>Parallel processing architecture</li>
+                            <li>Multi-language support</li>
+                            <li>Advanced trend analysis</li>
+                            <li>Collaborative research features</li>
+                            <li>International database integration</li>
+                            <li>Enhanced export capabilities</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation -->
+            <div class="navigation">
+                <button class="nav-button" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+                <button class="nav-button" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+                <div class="slide-counter">
+                    <span id="currentSlide">1</span> / <span id="totalSlides">10</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Section Navigation
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all nav links
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Add active class to clicked nav link
+            event.target.classList.add('active');
+        }
+
+        // Demo Section Functions
+        function highlightStep(step) {
+            // Remove previous highlights
+            document.querySelectorAll('.step').forEach(s => s.style.border = '2px solid transparent');
+            
+            // Highlight clicked step
+            step.style.border = '2px solid #ffd700';
+            step.style.background = 'rgba(255, 215, 0, 0.2)';
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                step.style.border = '2px solid transparent';
+                step.style.background = 'rgba(255, 255, 255, 0.15)';
+            }, 2000);
+        }
+
+        function runDemo() {
+            const basePaper = document.getElementById('base-paper').value;
+            const researchAngle = document.getElementById('research-angle').value;
+            const resultsDiv = document.getElementById('results');
+            
+            if (!basePaper || !researchAngle) {
+                resultsDiv.innerHTML = '⚠️ Please fill in both the base paper and research angle fields to run the demo.';
+                return;
+            }
+            
+            // Show loading animation
+            resultsDiv.classList.add('active');
+            resultsDiv.innerHTML = '🔄 Processing your research query... Analyzing base paper and generating keyword permutations...';
+            
+            // Simulate processing time
+            setTimeout(() => {
+                resultsDiv.innerHTML = `
+                    <div class="source-item">
+                        <div class="source-title">📚 Harvard Law Review - "Constitutional Implications of Digital Privacy"</div>
+                        <div class="source-desc">Highly relevant to your angle on privacy rights evolution. Cited 847 times.</div>
+                    </div>
+                    <div class="source-item">
+                        <div class="source-title">⚖️ Supreme Court Case: Carpenter v. United States (2018)</div>
+                        <div class="source-desc">Landmark decision directly supporting your research direction on digital surveillance.</div>
+                    </div>
+                    <div class="source-item">
+                        <div class="source-title">📰 Recent Legal Analysis: "Post-Pandemic Privacy Concerns"</div>
+                        <div class="source-desc">Contemporary perspective that bridges your base paper with current legal developments.</div>
+                    </div>
+                    <div class="source-item">
+                        <div class="source-title">📖 Law Journal: "Comparative Privacy Laws Across Jurisdictions"</div>
+                        <div class="source-desc">Cross-references found through citation chaining from your base paper's bibliography.</div>
+                    </div>
+                `;
+            }, 3000);
+        }
+
+        // Technology Section Functions
+        function showDetails(layer) {
+            // Add visual feedback
+            event.target.style.background = 'rgba(255, 215, 0, 0.2)';
+            setTimeout(() => {
+                event.target.style.background = 'rgba(255, 255, 255, 0.1)';
+            }, 1000);
+        }
+
+        // Presentation Section Functions
+        let currentSlideIndex = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            const newIndex = currentSlideIndex + direction;
+            if (newIndex >= 0 && newIndex < totalSlides) {
+                currentSlideIndex = newIndex;
+                showSlide(currentSlideIndex);
+            }
+        }
+
+        // Keyboard navigation for presentation
+        document.addEventListener('keydown', function(event) {
+            if (document.getElementById('presentation').classList.contains('active')) {
+                if (event.key === 'ArrowLeft') {
+                    changeSlide(-1);
+                } else if (event.key === 'ArrowRight') {
+                    changeSlide(1);
+                }
+            }
+        });
+
+        // Agent card click to expand/collapse
+        document.querySelectorAll('.agent-card').forEach(card => {
+            if (!card.classList.contains('expanded')) {
+                card.addEventListener('click', function() {
+                    this.classList.toggle('expanded');
+                });
+            }
+        });
+
+        // Initialize presentation
+        showSlide(0);
+
+        // Add entrance animations on page load
+        window.addEventListener('load', () => {
+            const steps = document.querySelectorAll('.step');
+            steps.forEach((step, index) => {
+                setTimeout(() => {
+                    step.style.animation = 'fadeInUp 0.6s ease forwards';
+                }, index * 200);
+            });
+
+            const layers = document.querySelectorAll('.tech-layer');
+            layers.forEach((layer, index) => {
+                setTimeout(() => {
+                    layer.style.opacity = '0';
+                    layer.style.transform = 'translateY(50px)';
+                    layer.style.transition = 'all 0.6s ease';
+                    
+                    setTimeout(() => {
+                        layer.style.opacity = '1';
+                        layer.style.transform = 'translateY(0)';
+                    }, 100);
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html>

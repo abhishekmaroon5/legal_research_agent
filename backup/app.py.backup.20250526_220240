@@ -1,0 +1,504 @@
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_socketio import SocketIO, emit
+import asyncio
+import json
+import os
+import threading
+import sqlite3
+from datetime import datetime
+from dotenv import load_dotenv
+import uuid
+
+# Import your existing agents
+from agents.argument_extractor import ArgumentExtractor
+from agents.keyword_generator import KeywordGenerator
+from agents.source_crawler import SourceCrawler
+from agents.citation_chainer import CitationChainer
+from agents.relevance_scorer import RelevanceScorer
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+load_dotenv()
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'legal-research-secret-key')
+socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Database setup
+def init_db():
+    """Initialize SQLite database for conversation history"""
+    conn = sqlite3.connect('research_history.db')
+    cursor = conn.cursor()
+    
+    # Create conversations table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS conversations (
+            id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            paper_content TEXT NOT NULL,
+            research_angle TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status TEXT DEFAULT 'completed',
+            is_favorite BOOLEAN DEFAULT FALSE
+        )
+    ''')
+    
+    # Create research_results table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS research_results (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT NOT NULL,
+            base_arguments TEXT,
+            research_analysis TEXT,
+            keywords TEXT,
+            sources TEXT,
+            summary TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversation_id) REFERENCES conversations (id)
+        )
+    ''')
+    
+    # Create user_preferences table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_preferences (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            preference_key TEXT NOT NULL,
+            preference_value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+# Initialize database
+init_db()
+
+# Global variables to store research state
+current_research = {
+    'status': 'idle',
+    'progress': 0,
+    'current_step': '',
+    'results': None,
+    'error': None,
+    'conversation_id': None
+}
+
+# Initialize model and agents
+MODEL_NAME = "models/gemini-1.5-flash-latest"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+if GEMINI_API_KEY:
+    model = ChatGoogleGenerativeAI(
+        model=MODEL_NAME,
+        google_api_key=GEMINI_API_KEY,
+        temperature=0.7,
+        top_p=0.95,
+        top_k=40,
+        max_output_tokens=2048,
+    )
+    
+    # Initialize agents
+    extractor = ArgumentExtractor(model=model)
+    keyword_generator = KeywordGenerator()
+    source_crawler = SourceCrawler()
+    citation_chainer = CitationChainer()
+    relevance_scorer = RelevanceScorer()
+else:
+    print("Warning: GEMINI_API_KEY not found. Some features may not work.")
+
+@app.route('/')
+def index():
+    """Main page"""
+    return render_template('index.html')
+
+@app.route('/api/conversations', methods=['GET'])
+def get_conversations():
+    """Get all conversation history"""
+    try:
+        conn = sqlite3.connect('research_history.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            SELECT id, title, paper_content, research_angle, created_at, status, is_favorite
+            FROM conversations 
+            ORDER BY created_at DESC
+        ''')
+        
+        conversations = []
+        for row in cursor.fetchall():
+            conversations.append({
+                'id': row[0],
+                'title': row[1],
+                'paper_content': row[2][:200] + '...' if len(row[2]) > 200 else row[2],
+                'research_angle': row[3],
+                'created_at': row[4],
+                'status': row[5],
+                'is_favorite': bool(row[6])
+            })
+        
+        conn.close()
+        return jsonify(conversations)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<conversation_id>', methods=['GET'])
+def get_conversation(conversation_id):
+    """Get specific conversation with results"""
+    try:
+        conn = sqlite3.connect('research_history.db')
+        cursor = conn.cursor()
+        
+        # Get conversation details
+        cursor.execute('''
+            SELECT id, title, paper_content, research_angle, created_at, status, is_favorite
+            FROM conversations WHERE id = ?
+        ''', (conversation_id,))
+        
+        conv_row = cursor.fetchone()
+        if not conv_row:
+            conn.close()
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        conversation = {
+            'id': conv_row[0],
+            'title': conv_row[1],
+            'paper_content': conv_row[2],
+            'research_angle': conv_row[3],
+            'created_at': conv_row[4],
+            'status': conv_row[5],
+            'is_favorite': bool(conv_row[6])
+        }
+        
+        # Get research results
+        cursor.execute('''
+            SELECT base_arguments, research_analysis, keywords, sources, summary
+            FROM research_results WHERE conversation_id = ?
+            ORDER BY created_at DESC LIMIT 1
+        ''', (conversation_id,))
+        
+        result_row = cursor.fetchone()
+        if result_row:
+            conversation['results'] = {
+                'base_arguments': json.loads(result_row[0]) if result_row[0] else {},
+                'research_analysis': json.loads(result_row[1]) if result_row[1] else {},
+                'keywords': json.loads(result_row[2]) if result_row[2] else [],
+                'sources': json.loads(result_row[3]) if result_row[3] else [],
+                'summary': json.loads(result_row[4]) if result_row[4] else {}
+            }
+        
+        conn.close()
+        return jsonify(conversation)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<conversation_id>/favorite', methods=['POST'])
+def toggle_favorite(conversation_id):
+    """Toggle favorite status of a conversation"""
+    try:
+        conn = sqlite3.connect('research_history.db')
+        cursor = conn.cursor()
+        
+        # Get current favorite status
+        cursor.execute('SELECT is_favorite FROM conversations WHERE id = ?', (conversation_id,))
+        row = cursor.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Toggle favorite status
+        new_status = not bool(row[0])
+        cursor.execute('''
+            UPDATE conversations SET is_favorite = ?, updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (new_status, conversation_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'is_favorite': new_status})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/conversation/<conversation_id>', methods=['DELETE'])
+def delete_conversation(conversation_id):
+    """Delete a conversation and its results"""
+    try:
+        conn = sqlite3.connect('research_history.db')
+        cursor = conn.cursor()
+        
+        # Delete research results first (foreign key constraint)
+        cursor.execute('DELETE FROM research_results WHERE conversation_id = ?', (conversation_id,))
+        
+        # Delete conversation
+        cursor.execute('DELETE FROM conversations WHERE id = ?', (conversation_id,))
+        
+        if cursor.rowcount == 0:
+            conn.close()
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'message': 'Conversation deleted successfully'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/research', methods=['POST'])
+def start_research():
+    """Start the research process"""
+    global current_research
+    
+    if current_research['status'] == 'running':
+        return jsonify({'error': 'Research already in progress'}), 400
+    
+    data = request.get_json()
+    paper_content = data.get('paper_content', '')
+    research_angle = data.get('research_angle', '')
+    conversation_id = data.get('conversation_id')  # Optional, for continuing existing conversation
+    
+    if not paper_content or not research_angle:
+        return jsonify({'error': 'Paper content and research angle are required'}), 400
+    
+    # Generate new conversation ID if not provided
+    if not conversation_id:
+        conversation_id = str(uuid.uuid4())
+        
+        # Save conversation to database
+        try:
+            conn = sqlite3.connect('research_history.db')
+            cursor = conn.cursor()
+            
+            # Generate title from research angle (first 50 chars)
+            title = research_angle[:50] + '...' if len(research_angle) > 50 else research_angle
+            
+            cursor.execute('''
+                INSERT INTO conversations (id, title, paper_content, research_angle, status)
+                VALUES (?, ?, ?, ?, 'running')
+            ''', (conversation_id, title, paper_content, research_angle))
+            
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            return jsonify({'error': f'Failed to save conversation: {str(e)}'}), 500
+    
+    # Reset research state
+    current_research = {
+        'status': 'running',
+        'progress': 0,
+        'current_step': 'Starting research...',
+        'results': None,
+        'error': None,
+        'conversation_id': conversation_id
+    }
+    
+    # Start research in background thread
+    thread = threading.Thread(
+        target=run_research_async,
+        args=(paper_content, research_angle, conversation_id)
+    )
+    thread.start()
+    
+    return jsonify({
+        'message': 'Research started successfully',
+        'conversation_id': conversation_id
+    })
+
+@app.route('/api/status')
+def get_status():
+    """Get current research status"""
+    return jsonify(current_research)
+
+@app.route('/api/results')
+def get_results():
+    """Get research results"""
+    if current_research['results']:
+        return jsonify(current_research['results'])
+    return jsonify({'error': 'No results available'}), 404
+
+def save_research_results(conversation_id, results):
+    """Save research results to database"""
+    try:
+        conn = sqlite3.connect('research_history.db')
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO research_results 
+            (conversation_id, base_arguments, research_analysis, keywords, sources, summary)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (
+            conversation_id,
+            json.dumps(results.get('base_arguments', {})),
+            json.dumps(results.get('research_analysis', {})),
+            json.dumps(results.get('keywords', [])),
+            json.dumps(results.get('sources', [])),
+            json.dumps(results.get('summary', {}))
+        ))
+        
+        # Update conversation status
+        cursor.execute('''
+            UPDATE conversations SET status = 'completed', updated_at = CURRENT_TIMESTAMP 
+            WHERE id = ?
+        ''', (conversation_id,))
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Error saving research results: {str(e)}")
+
+def run_research_async(paper_content, research_angle, conversation_id):
+    """Run research process asynchronously"""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(run_research(paper_content, research_angle, conversation_id))
+    except Exception as e:
+        current_research['status'] = 'error'
+        current_research['error'] = str(e)
+        socketio.emit('research_error', {'error': str(e)})
+        
+        # Update conversation status in database
+        try:
+            conn = sqlite3.connect('research_history.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE conversations SET status = 'error', updated_at = CURRENT_TIMESTAMP 
+                WHERE id = ?
+            ''', (conversation_id,))
+            conn.commit()
+            conn.close()
+        except:
+            pass
+    finally:
+        loop.close()
+
+async def run_research(paper_content, research_angle, conversation_id):
+    """Main research workflow"""
+    global current_research
+    
+    try:
+        # Step 1: Extract base arguments
+        current_research['current_step'] = 'Extracting base arguments...'
+        current_research['progress'] = 15
+        socketio.emit('research_progress', current_research)
+        
+        arguments_result = await extractor.extract_arguments(paper_content, research_angle)
+        base_arguments = arguments_result['base_arguments']
+        research_analysis = arguments_result['research_analysis']
+        combined_context = arguments_result['combined_context']
+        
+        # Step 2: Generate keywords
+        current_research['current_step'] = 'Generating search keywords...'
+        current_research['progress'] = 30
+        socketio.emit('research_progress', current_research)
+        
+        keywords = await keyword_generator.generate_keywords(combined_context)
+        
+        # Step 3: Crawl sources
+        current_research['current_step'] = 'Searching for sources...'
+        current_research['progress'] = 50
+        socketio.emit('research_progress', current_research)
+        
+        sources = await source_crawler.crawl_sources(keywords)
+        
+        # Step 4: Chain citations
+        current_research['current_step'] = 'Following citation chains...'
+        current_research['progress'] = 70
+        socketio.emit('research_progress', current_research)
+        
+        expanded_sources = await citation_chainer.chain_citations(sources, combined_context)
+        
+        # Step 5: Score sources
+        current_research['current_step'] = 'Scoring and ranking sources...'
+        current_research['progress'] = 85
+        socketio.emit('research_progress', current_research)
+        
+        scored_sources = await relevance_scorer.score_sources(expanded_sources, combined_context)
+        
+        # Prepare results
+        current_research['current_step'] = 'Finalizing results...'
+        current_research['progress'] = 95
+        socketio.emit('research_progress', current_research)
+        
+        # Format results for UI
+        results = {
+            'conversation_id': conversation_id,
+            'base_arguments': base_arguments,
+            'research_analysis': research_analysis,
+            'keywords': keywords[:10],  # Top 10 keywords
+            'sources': format_sources_for_ui(scored_sources[:20]),  # Top 20 sources
+            'summary': generate_research_summary(base_arguments, research_analysis, scored_sources),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Save results to database
+        save_research_results(conversation_id, results)
+        
+        # Complete research
+        current_research['status'] = 'completed'
+        current_research['progress'] = 100
+        current_research['current_step'] = 'Research completed!'
+        current_research['results'] = results
+        
+        socketio.emit('research_complete', results)
+        
+    except Exception as e:
+        current_research['status'] = 'error'
+        current_research['error'] = str(e)
+        socketio.emit('research_error', {'error': str(e)})
+
+def format_sources_for_ui(sources):
+    """Format sources for UI display"""
+    formatted_sources = []
+    for source in sources:
+        if hasattr(source, 'title'):
+            # Handle Source objects
+            formatted_source = {
+                'title': source.title,
+                'url': source.url,
+                'content': source.content[:500] + '...' if len(source.content) > 500 else source.content,
+                'relevance_score': getattr(source, 'relevance_score', 0),
+                'date': source.date.isoformat() if source.date else None,
+                'citations': len(source.citations) if source.citations else 0,
+                'reasoning': getattr(source, 'reasoning', {})
+            }
+        else:
+            # Handle dict objects
+            formatted_source = {
+                'title': source.get('title', ''),
+                'url': source.get('url', ''),
+                'content': source.get('content', '')[:500] + '...' if len(source.get('content', '')) > 500 else source.get('content', ''),
+                'relevance_score': source.get('relevance_score', 0),
+                'date': None,
+                'citations': 0,
+                'reasoning': source.get('reasoning', {})
+            }
+        formatted_sources.append(formatted_source)
+    return formatted_sources
+
+def generate_research_summary(base_arguments, research_analysis, sources):
+    """Generate a summary of the research"""
+    return {
+        'total_sources': len(sources),
+        'key_themes': list(base_arguments.keys()) if isinstance(base_arguments, dict) else [],
+        'research_focus': research_analysis.get('focus_areas', []) if isinstance(research_analysis, dict) else [],
+        'top_source_types': ['legal', 'news'],  # Based on your source crawler
+    }
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle client connection"""
+    emit('connected', {'data': 'Connected to research server'})
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle client disconnection"""
+    print('Client disconnected')
+
+if __name__ == '__main__':
+    # Create templates and static directories if they don't exist
+    os.makedirs('templates', exist_ok=True)
+    os.makedirs('static/css', exist_ok=True)
+    os.makedirs('static/js', exist_ok=True)
+    
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000)

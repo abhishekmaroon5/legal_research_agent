@@ -1,0 +1,61 @@
+{
+  "paper_content": "https://3fdef50c-add3-4615-a675-a91741bcb5c0.usrfiles.com/ugd/3fdef5_1c44141f484c4967a4259eb97b5333c2.pdf",
+  "research_angle": "Analyzing the impact of AI on intellectual property rights",
+  "base_arguments": {
+    "thesis": "",
+    "supporting_points": [],
+    "methodology": "",
+    "findings": [],
+    "limitations": []
+  },
+  "research_analysis": {
+    "builds_upon": [],
+    "diverges": [],
+    "gaps_addressed": [],
+    "focus_areas": []
+  },
+  "combined_context": {
+    "base_paper": {
+      "thesis": "",
+      "supporting_points": [],
+      "methodology": "",
+      "findings": [],
+      "limitations": []
+    },
+    "new_angle": {
+      "builds_upon": [],
+      "diverges": [],
+      "gaps_addressed": [],
+      "focus_areas": []
+    }
+  },
+  "keywords": [
+    {
+      "keyword": "artificial intelligence",
+      "score": 0.95
+    },
+    {
+      "keyword": "intellectual property rights",
+      "score": 0.92
+    },
+    {
+      "keyword": "AI patent law",
+      "score": 0.88
+    },
+    {
+      "keyword": "machine learning copyright",
+      "score": 0.85
+    },
+    {
+      "keyword": "AI authorship",
+      "score": 0.82
+    }
+  ],
+  "sources": [],
+  "scored_sources": [],
+  "metadata": {
+    "start_time": "2025-05-26T19:14:58.812753",
+    "end_time": "2025-05-26T19:15:12.835174",
+    "duration": 14.022431
+  }
+}

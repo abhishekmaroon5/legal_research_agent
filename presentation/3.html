@@ -1,0 +1,740 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Research Agent System - Interactive Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+
+        .presentation-container {
+            width: 90%;
+            max-width: 1200px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+
+        .slide {
+            display: none;
+            animation: slideIn 0.5s ease-in-out;
+        }
+
+        .slide.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .slide-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .slide-title {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .slide-subtitle {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .agent-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 1rem 0;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .agent-card:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .agent-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .agent-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            color: #FFD700;
+        }
+
+        .agent-description {
+            font-size: 1rem;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .agent-details {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            display: none;
+        }
+
+        .agent-card.expanded .agent-details {
+            display: block;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .feature-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .feature-list li {
+            margin: 0.5rem 0;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .feature-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #4CAF50;
+            font-weight: bold;
+        }
+
+        .workflow-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .workflow-step {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            padding: 1rem 2rem;
+            text-align: center;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .workflow-step:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        .workflow-arrow {
+            font-size: 2rem;
+            color: #FFD700;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+            40% { transform: translateY(-10px); }
+            60% { transform: translateY(-5px); }
+        }
+
+        .navigation {
+            text-align: center;
+            margin-top: 2rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .nav-button {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            margin: 0 0.5rem;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-counter {
+            text-align: center;
+            margin-top: 1rem;
+            opacity: 0.7;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #FFD700;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 0.5rem;
+        }
+
+        .overview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .tech-stack {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .tech-item {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.5rem 1rem;
+            margin: 0.25rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .slide-title {
+                font-size: 2rem;
+            }
+            
+            .presentation-container {
+                width: 95%;
+                padding: 1rem;
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="presentation-container">
+        <!-- Slide 1: Title Slide -->
+        <div class="slide active">
+            <div class="slide-header">
+                <div class="slide-title">🏛️ Legal Research Agent System</div>
+                <div class="slide-subtitle">AI-Powered Multi-Agent Architecture for Comprehensive Legal Research</div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">8</div>
+                    <div class="metric-label">Specialized AI Agents</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">15+</div>
+                    <div class="metric-label">Sources Analyzed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">60-120s</div>
+                    <div class="metric-label">Processing Time</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">🇮🇳</div>
+                    <div class="metric-label">Indian Legal Focus</div>
+                </div>
+            </div>
+
+            <div class="tech-stack">
+                <h3 style="margin-bottom: 1rem;">🔧 Technology Stack</h3>
+                <span class="tech-item">LangGraph Orchestration</span>
+                <span class="tech-item">Google Gemini AI</span>
+                <span class="tech-item">Tavily Search API</span>
+                <span class="tech-item">TF-IDF Analysis</span>
+                <span class="tech-item">WebSocket Real-time</span>
+                <span class="tech-item">Multi-Agent Architecture</span>
+            </div>
+        </div>
+
+        <!-- Slide 2: System Overview -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">🔄 System Workflow Overview</div>
+                <div class="slide-subtitle">Sequential Multi-Agent Processing Pipeline</div>
+            </div>
+            
+            <div class="workflow-diagram">
+                <div class="workflow-step">📄 Input: Legal Paper + Research Angle</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">🔍 Argument Extraction</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">⚖️ Angle Analysis</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">🔗 Context Merger</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">🎯 Keyword Generation</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">🌐 Multi-Source Search</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">📚 Citation Chaining</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">⭐ Quality Assessment</div>
+                <div class="workflow-arrow">↓</div>
+                <div class="workflow-step">📊 Curated Research Output</div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Agent 1 - Argument Extraction -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 1: Argument Extraction</div>
+                <div class="slide-subtitle">Foundation of Legal Analysis</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">📄</div>
+                <div class="agent-title">Argument Extraction Agent</div>
+                <div class="agent-description">
+                    Analyzes legal papers to extract core arguments, thesis statements, and key legal concepts using advanced AI processing.
+                </div>
+                <div class="agent-details">
+                    <h4>🎯 Core Functions:</h4>
+                    <ul class="feature-list">
+                        <li>Document Processing (PDF & Text)</li>
+                        <li>Thesis Identification</li>
+                        <li>Supporting Points Extraction</li>
+                        <li>Methodology Analysis</li>
+                        <li>Key Findings Summary</li>
+                        <li>Gap & Limitation Identification</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">⚡ Technical Features:</h4>
+                    <ul class="feature-list">
+                        <li>PyPDF2 Integration for PDF Processing</li>
+                        <li>Google Gemini AI Analysis</li>
+                        <li>Structured JSON Output</li>
+                        <li>4,000 Character Optimization</li>
+                        <li>Error-Resilient Parsing</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Agent 2 - Angle Analysis -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 2: Angle Analysis</div>
+                <div class="slide-subtitle">Research Direction Optimization</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">⚖️</div>
+                <div class="agent-title">Angle Analysis Agent</div>
+                <div class="agent-description">
+                    Compares research angle with base arguments to identify convergence, divergence, and unique research opportunities.
+                </div>
+                <div class="agent-details">
+                    <h4>🎯 Core Functions:</h4>
+                    <ul class="feature-list">
+                        <li>Comparative Analysis</li>
+                        <li>Gap Identification</li>
+                        <li>Divergence Point Detection</li>
+                        <li>Focus Area Recommendation</li>
+                        <li>Research Scope Definition</li>
+                        <li>Novelty Assessment</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">📊 Output Categories:</h4>
+                    <ul class="feature-list">
+                        <li><strong>Builds Upon:</strong> Areas of alignment and extension</li>
+                        <li><strong>Diverges:</strong> Points of departure from base</li>
+                        <li><strong>Gaps Addressed:</strong> New territory coverage</li>
+                        <li><strong>Focus Areas:</strong> Specific research directions</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Agent 3 & 4 - Context Merger & Keyword Generation -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agents 3 & 4: Context & Keywords</div>
+                <div class="slide-subtitle">Research Context Unification & Search Optimization</div>
+            </div>
+            
+            <div class="overview-grid">
+                <div class="agent-card">
+                    <div class="agent-icon">🔗</div>
+                    <div class="agent-title">Context Merger Agent</div>
+                    <div class="agent-description">
+                        Combines argument extraction and angle analysis into unified research context.
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <h4>🎯 Functions:</h4>
+                        <ul class="feature-list" style="font-size: 0.9rem;">
+                            <li>Data Consolidation</li>
+                            <li>Context Structuring</li>
+                            <li>Information Synthesis</li>
+                            <li>Standardized Format Creation</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="agent-card">
+                    <div class="agent-icon">🎯</div>
+                    <div class="agent-title">Keyword Generation Agent</div>
+                    <div class="agent-description">
+                        Creates comprehensive search keywords optimized for legal database searches.
+                    </div>
+                    <div style="margin-top: 1rem;">
+                        <h4>🎯 Functions:</h4>
+                        <ul class="feature-list" style="font-size: 0.9rem;">
+                            <li>Term Extraction</li>
+                            <li>Permutation Generation</li>
+                            <li>Relevance Ranking</li>
+                            <li>Legal Term Integration</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Agent 5 - Search Agents -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 5: Search Agents (Tavily)</div>
+                <div class="slide-subtitle">Multi-Domain Legal Source Discovery</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">🌐</div>
+                <div class="agent-title">Search Agents (Tavily Integration)</div>
+                <div class="agent-description">
+                    Conducts comprehensive searches across Indian legal databases and news sources using optimized keywords.
+                </div>
+                <div class="agent-details">
+                    <h4>🇮🇳 Indian Legal Sources (Weight: 1.0):</h4>
+                    <ul class="feature-list">
+                        <li><strong>indiankanoon.org</strong> - Comprehensive case law database</li>
+                        <li><strong>sci.gov.in</strong> - Supreme Court of India official</li>
+                        <li><strong>lawmin.gov.in</strong> - Ministry of Law & Justice</li>
+                        <li><strong>barandbench.com</strong> - Legal news and analysis</li>
+                        <li><strong>livelaw.in</strong> - Real-time legal updates</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">📰 News Sources (Weight: 0.8):</h4>
+                    <ul class="feature-list">
+                        <li>The Hindu, Indian Express - National newspapers</li>
+                        <li>Economic Times - Business law coverage</li>
+                        <li>Legal news platforms - Specialized coverage</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">⚡ Performance Features:</h4>
+                    <ul class="feature-list">
+                        <li>Concurrent multi-domain searching</li>
+                        <li>Real-time crawling status updates</li>
+                        <li>Advanced duplicate removal</li>
+                        <li>Error recovery mechanisms</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Agent 6 - Citation Chaining -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 6: Citation Chaining</div>
+                <div class="slide-subtitle">Legal Precedent Network Expansion</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">📚</div>
+                <div class="agent-title">Citation Chaining Agent</div>
+                <div class="agent-description">
+                    Follows citation networks within discovered sources to find related legal precedents and expand research scope.
+                </div>
+                <div class="agent-details">
+                    <h4>🎯 Core Functions:</h4>
+                    <ul class="feature-list">
+                        <li>Citation Pattern Recognition</li>
+                        <li>Legal Network Traversal</li>
+                        <li>Precedent Discovery</li>
+                        <li>Relevance Assessment</li>
+                        <li>Recursive Citation Following</li>
+                        <li>Network Expansion Control</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">📋 Citation Patterns Supported:</h4>
+                    <ul class="feature-list">
+                        <li>Supreme Court Citations (U.S. format)</li>
+                        <li>Federal Case Citations</li>
+                        <li>Court Reporter Citations</li>
+                        <li>Indian Legal Citation Formats</li>
+                        <li>Custom Regex Pattern Matching</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">⚡ Smart Features:</h4>
+                    <ul class="feature-list">
+                        <li>Relevance threshold filtering (>0.5)</li>
+                        <li>Duplicate citation prevention</li>
+                        <li>Network depth limiting</li>
+                        <li>Citation quality assessment</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Agent 7 - Quality Assessment -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 7: Quality Assessment</div>
+                <div class="slide-subtitle">Multi-Dimensional Source Scoring</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">⭐</div>
+                <div class="agent-title">Quality Assessment Agent (Relevance Scorer)</div>
+                <div class="agent-description">
+                    Evaluates and ranks all discovered sources using sophisticated multi-dimensional scoring algorithms.
+                </div>
+                <div class="agent-details">
+                    <h4>📊 Scoring Dimensions:</h4>
+                    <div style="background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+                        <strong>Final Score = </strong><br>
+                        Text Similarity (25%) + <br>
+                        Keyword Match (25%) + <br>
+                        Content Relevance (25%) + <br>
+                        Trust Score (15%) + <br>
+                        Alignment Score (10%)
+                    </div>
+                    
+                    <h4>🇮🇳 Indian Legal Optimization:</h4>
+                    <ul class="feature-list">
+                        <li>25+ Indian legal keywords integration</li>
+                        <li>High-authority domain prioritization</li>
+                        <li>Citation pattern recognition</li>
+                        <li>Government source authority weighting</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">⚡ Advanced Features:</h4>
+                    <ul class="feature-list">
+                        <li>TF-IDF semantic similarity analysis</li>
+                        <li>Real-time scoring progress updates</li>
+                        <li>Fallback scoring for robustness</li>
+                        <li>Batch processing up to 15 sources</li>
+                        <li>Detailed reasoning for all scores</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Agent 8 - Output Curation -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">Agent 8: Output Curation</div>
+                <div class="slide-subtitle">Comprehensive Research Report Generation</div>
+            </div>
+            
+            <div class="agent-card expanded">
+                <div class="agent-icon">📊</div>
+                <div class="agent-title">Output Curation Agent</div>
+                <div class="agent-description">
+                    Synthesizes and formats final research output, combining all agent results into a coherent research report.
+                </div>
+                <div class="agent-details">
+                    <h4>📋 Output Structure:</h4>
+                    <ul class="feature-list">
+                        <li><strong>Research Context:</strong> Original arguments + angle analysis</li>
+                        <li><strong>Discovery Results:</strong> Keywords + sources + citations</li>
+                        <li><strong>Quality Metrics:</strong> Scores + authority + relevance</li>
+                        <li><strong>Research Summary:</strong> Key themes + recommendations</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">🎯 Curation Features:</h4>
+                    <ul class="feature-list">
+                        <li>Result aggregation from all agents</li>
+                        <li>Format standardization</li>
+                        <li>Summary generation</li>
+                        <li>Quality assurance validation</li>
+                        <li>Interactive UI formatting</li>
+                        <li>Export-ready structuring</li>
+                    </ul>
+                    
+                    <h4 style="margin-top: 1.5rem;">📊 Final Deliverables:</h4>
+                    <ul class="feature-list">
+                        <li>Top 10 ranked keywords</li>
+                        <li>Top 20 scored sources</li>
+                        <li>Comprehensive quality metrics</li>
+                        <li>Research recommendations</li>
+                        <li>Citation network map</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: System Performance & Benefits -->
+        <div class="slide">
+            <div class="slide-header">
+                <div class="slide-title">🚀 System Performance & Benefits</div>
+                <div class="slide-subtitle">Comprehensive Analysis & Future Vision</div>
+            </div>
+            
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">8</div>
+                    <div class="metric-label">Specialized Agents</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">15+</div>
+                    <div class="metric-label">Sources Processed</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">5</div>
+                    <div class="metric-label">Scoring Dimensions</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">25+</div>
+                    <div class="metric-label">Indian Legal Keywords</div>
+                </div>
+            </div>
+            
+            <div class="overview-grid" style="margin-top: 2rem;">
+                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px;">
+                    <h3 style="color: #4CAF50; margin-bottom: 1rem;">✅ System Strengths</h3>
+                    <ul class="feature-list">
+                        <li>Modular, maintainable architecture</li>
+                        <li>Comprehensive multi-source coverage</li>
+                        <li>Indian legal context optimization</li>
+                        <li>Real-time progress feedback</li>
+                        <li>Multi-dimensional quality assessment</li>
+                        <li>Error-resilient processing</li>
+                    </ul>
+                </div>
+                
+                <div style="background: rgba(255,255,255,0.1); padding: 1.5rem; border-radius: 10px;">
+                    <h3 style="color: #FFD700; margin-bottom: 1rem;">🔮 Future Enhancements</h3>
+                    <ul class="feature-list">
+                        <li>Parallel processing architecture</li>
+                        <li>Multi-language support</li>
+                        <li>Advanced trend analysis</li>
+                        <li>Collaborative research features</li>
+                        <li>International database integration</li>
+                        <li>Enhanced export capabilities</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="navigation">
+            <button class="nav-button" id="prevBtn" onclick="changeSlide(-1)">← Previous</button>
+            <button class="nav-button" id="nextBtn" onclick="changeSlide(1)">Next →</button>
+            <div class="slide-counter">
+                <span id="currentSlide">1</span> / <span id="totalSlides">10</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSlideIndex = 0;
+        const slides = document.querySelectorAll('.slide');
+        const totalSlides = slides.length;
+        
+        document.getElementById('totalSlides').textContent = totalSlides;
+
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            slides[index].classList.add('active');
+            
+            document.getElementById('currentSlide').textContent = index + 1;
+            document.getElementById('prevBtn').disabled = index === 0;
+            document.getElementById('nextBtn').disabled = index === totalSlides - 1;
+        }
+
+        function changeSlide(direction) {
+            const newIndex = currentSlideIndex + direction;
+            if (newIndex >= 0 && newIndex < totalSlides) {
+                currentSlideIndex = newIndex;
+                showSlide(currentSlideIndex);
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                changeSlide(-1);
+            } else if (event.key === 'ArrowRight') {
+                changeSlide(1);
+            }
+        });
+
+        // Agent card click to expand/collapse
+        document.querySelectorAll('.agent-card').forEach(card => {
+            if (!card.classList.contains('expanded')) {
+                card.addEventListener('click', function() {
+                    this.classList.toggle('expanded');
+                });
+            }
+        });
+
+        // Initialize
+        showSlide(0);
+    </script>
+</body>
+</html>

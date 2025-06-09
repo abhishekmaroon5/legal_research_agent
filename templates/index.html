@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legal Research Assistant</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .sidebar-transition { transition: transform 0.3s ease-in-out; }
+        .conversation-item:hover { background-color: #f3f4f6; }
+        .conversation-item.active { background-color: #dbeafe; border-left: 4px solid #3b82f6; }
+        .progress-step { text-align: center; opacity: 0.5; transition: all 0.3s ease; }
+        .progress-step.active { opacity: 1; }
+        .progress-step.completed { opacity: 1; }
+        .step-icon { width: 48px; height: 48px; border-radius: 50%; background-color: #e5e7eb; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; }
+        .progress-step.active .step-icon { background-color: #3b82f6; color: white; }
+        .progress-step.completed .step-icon { background-color: #10b981; color: white; }
+        #progress-bar { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-50 flex h-screen">
+    <!-- Sidebar -->
+    <div id="sidebar" class="w-80 bg-white shadow-lg flex flex-col sidebar-transition">
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-gray-800">
+                    <i class="fas fa-history mr-2"></i>Research History
+                </h2>
+                <button id="new-research-btn" class="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
+                    <i class="fas fa-plus mr-1"></i>New
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search Bar -->
+        <div class="p-4 border-b border-gray-200">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="search-conversations" 
+                    placeholder="Search conversations..."
+                    class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
+            </div>
+        </div>
+        
+        <!-- Filter Tabs -->
+        <div class="flex border-b border-gray-200">
+            <button class="filter-tab active flex-1 py-2 px-4 text-sm font-medium" data-filter="all">
+                All
+            </button>
+            <button class="filter-tab flex-1 py-2 px-4 text-sm font-medium" data-filter="favorites">
+                <i class="fas fa-star mr-1"></i>Favorites
+            </button>
+        </div>
+        
+        <!-- Conversations List -->
+        <div class="flex-1 overflow-y-auto">
+            <div id="conversations-list" class="space-y-1 p-2">
+                <!-- Conversations will be loaded here -->
+                <div id="loading-conversations" class="flex items-center justify-center py-8">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                    <span class="ml-2 text-gray-600">Loading conversations...</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar Footer -->
+        <div class="p-4 border-t border-gray-200">
+            <div class="text-xs text-gray-500 text-center">
+                <i class="fas fa-database mr-1"></i>
+                <span id="total-conversations">0</span> conversations saved
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-900 to-blue-700 text-white shadow-lg">
+            <div class="px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <button id="toggle-sidebar" class="md:hidden">
+                            <i class="fas fa-bars text-xl"></i>
+                        </button>
+                        <i class="fas fa-gavel text-2xl"></i>
+                        <h1 class="text-2xl font-bold">Legal Research Assistant</h1>
+                    </div>
+                    <div class="text-sm opacity-90">
+                        AI-Powered Legal Research & Citation Analysis
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto p-6">
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="text-center py-16">
+                <div class="max-w-2xl mx-auto">
+                    <i class="fas fa-balance-scale text-6xl text-blue-600 mb-6"></i>
+                    <h2 class="text-3xl font-bold text-gray-800 mb-4">Welcome to Legal Research Assistant</h2>
+                    <p class="text-lg text-gray-600 mb-8">
+                        Start a new research session or select a previous conversation from the sidebar to continue your work.
+                    </p>
+                    <button id="start-new-research" class="bg-blue-600 text-white px-8 py-3 rounded-lg text-lg font-medium hover:bg-blue-700 transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>Start New Research
+                    </button>
+                </div>
+            </div>
+
+            <!-- Research Form -->
+            <div id="research-form" class="max-w-4xl mx-auto hidden">
+                <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800">
+                            <i class="fas fa-search mr-2"></i>
+                            <span id="form-title">Start New Research</span>
+                        </h2>
+                        <button id="cancel-research" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <form id="researchForm" class="space-y-6">
+                        <div>
+                            <label for="paper-content" class="block text-sm font-medium text-gray-700 mb-2">
+                                Paper Content or URL
+                            </label>
+                            <textarea 
+                                id="paper-content" 
+                                name="paper_content" 
+                                rows="6" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Enter the full text of your legal paper or paste a URL to a PDF..."
+                                required
+                            ></textarea>
+                            <p class="mt-1 text-sm text-gray-500">
+                                You can paste either the full text of your paper or a URL to a PDF document.
+                            </p>
+                        </div>
+
+                        <div>
+                            <label for="research-angle" class="block text-sm font-medium text-gray-700 mb-2">
+                                Research Angle
+                            </label>
+                            <textarea 
+                                id="research-angle" 
+                                name="research_angle" 
+                                rows="3" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="Describe the specific angle or perspective you want to research..."
+                                required
+                            ></textarea>
+                            <p class="mt-1 text-sm text-gray-500">
+                                Example: "Analyzing the impact of AI on intellectual property rights"
+                            </p>
+                        </div>
+
+                        <div class="flex space-x-4">
+                            <button 
+                                type="submit" 
+                                id="submit-btn"
+                                class="flex-1 bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 font-medium"
+                            >
+                                <i class="fas fa-rocket mr-2"></i>Start Research
+                            </button>
+                            <button 
+                                type="button" 
+                                id="save-draft-btn"
+                                class="px-6 py-3 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition duration-200"
+                            >
+                                <i class="fas fa-save mr-2"></i>Save Draft
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progress-section" class="max-w-4xl mx-auto hidden">
+                <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+                    <h2 class="text-2xl font-semibold text-gray-800 mb-6">
+                        <i class="fas fa-cogs mr-2"></i>Research Progress
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <span id="current-step" class="text-gray-600">Initializing...</span>
+                            <span id="progress-percentage" class="text-blue-600 font-medium">0%</span>
+                        </div>
+                        
+                        <div class="w-full bg-gray-200 rounded-full h-3">
+                            <div id="progress-bar" class="bg-blue-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                        </div>
+                        
+                        <!-- Crawling Status Section -->
+                        <div id="crawling-status-section" class="bg-blue-50 rounded-lg p-4 hidden">
+                            <h3 class="text-lg font-semibold text-blue-800 mb-3">
+                                <i class="fas fa-globe mr-2"></i>Website Crawling Status
+                            </h3>
+                            <div id="crawling-messages" class="max-h-40 overflow-y-auto space-y-2">
+                                <!-- Crawling messages will appear here -->
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-8">
+                            <div class="progress-step" data-step="1">
+                                <div class="step-icon">
+                                    <i class="fas fa-file-text"></i>
+                                </div>
+                                <div class="step-label">Extract Arguments</div>
+                            </div>
+                            <div class="progress-step" data-step="2">
+                                <div class="step-icon">
+                                    <i class="fas fa-key"></i>
+                                </div>
+                                <div class="step-label">Generate Keywords</div>
+                            </div>
+                            <div class="progress-step" data-step="3">
+                                <div class="step-icon">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <div class="step-label">Search Sources</div>
+                            </div>
+                            <div class="progress-step" data-step="4">
+                                <div class="step-icon">
+                                    <i class="fas fa-link"></i>
+                                </div>
+                                <div class="step-label">Chain Citations</div>
+                            </div>
+                            <div class="progress-step" data-step="5">
+                                <div class="step-icon">
+                                    <i class="fas fa-star"></i>
+                                </div>
+                                <div class="step-label">Score Sources</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results-section" class="max-w-6xl mx-auto hidden">
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-blue-100 text-blue-600">
+                                <i class="fas fa-database"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Total Sources</p>
+                                <p id="total-sources" class="text-2xl font-semibold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-green-100 text-green-600">
+                                <i class="fas fa-key"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Keywords</p>
+                                <p id="total-keywords" class="text-2xl font-semibold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-purple-100 text-purple-600">
+                                <i class="fas fa-quote-left"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Citations</p>
+                                <p id="total-citations" class="text-2xl font-semibold text-gray-900">0</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow-lg p-6">
+                        <div class="flex items-center">
+                            <div class="p-3 rounded-full bg-yellow-100 text-yellow-600">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <div class="ml-4">
+                                <p class="text-sm font-medium text-gray-600">Avg. Score</p>
+                                <p id="avg-score" class="text-2xl font-semibold text-gray-900">0.0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="bg-white rounded-lg shadow-lg">
+                    <div class="border-b border-gray-200">
+                        <nav class="-mb-px flex">
+                            <button class="tab-button active" data-tab="arguments">
+                                <i class="fas fa-balance-scale mr-2"></i>Arguments
+                            </button>
+                            <button class="tab-button" data-tab="keywords">
+                                <i class="fas fa-tags mr-2"></i>Keywords
+                            </button>
+                            <button class="tab-button" data-tab="sources">
+                                <i class="fas fa-book mr-2"></i>Sources
+                            </button>
+                            <button class="tab-button" data-tab="analysis">
+                                <i class="fas fa-chart-bar mr-2"></i>Analysis
+                            </button>
+                        </nav>
+                    </div>
+
+                    <!-- Tab Content -->
+                    <div class="p-8">
+                        <!-- Arguments Tab -->
+                        <div id="arguments-tab" class="tab-content active">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Base Arguments</h3>
+                            <div id="base-arguments" class="space-y-4 mb-8"></div>
+                            
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Research Analysis</h3>
+                            <div id="research-analysis" class="space-y-4"></div>
+                        </div>
+
+                        <!-- Keywords Tab -->
+                        <div id="keywords-tab" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Generated Keywords</h3>
+                            <div id="keywords-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                        </div>
+
+                        <!-- Sources Tab -->
+                        <div id="sources-tab" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Research Sources</h3>
+                            <div id="sources-list" class="space-y-6"></div>
+                        </div>
+
+                        <!-- Analysis Tab -->
+                        <div id="analysis-tab" class="tab-content hidden">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Research Summary</h3>
+                            <div id="analysis-content" class="space-y-6"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-8 flex flex-wrap gap-4 justify-center">
+                    <button id="save-research-btn" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition duration-200">
+                        <i class="fas fa-save mr-2"></i>Save Research
+                    </button>
+                    <button id="export-research-btn" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition duration-200">
+                        <i class="fas fa-download mr-2"></i>Export Results
+                    </button>
+                    <button id="share-research-btn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition duration-200">
+                        <i class="fas fa-share mr-2"></i>Share Research
+                    </button>
+                    <button id="new-research-from-results" class="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition duration-200">
+                        <i class="fas fa-plus mr-2"></i>New Research
+                    </button>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-exclamation-triangle text-red-500 text-xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-gray-900">Error</h3>
+            </div>
+            <p id="error-message" class="text-gray-600 mb-6"></p>
+            <button id="close-error" class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition duration-200">
+                Close
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <div class="flex items-center mb-4">
+                <i class="fas fa-question-circle text-yellow-500 text-xl mr-3"></i>
+                <h3 class="text-lg font-semibold text-gray-900">Confirm Action</h3>
+            </div>
+            <p id="confirm-message" class="text-gray-600 mb-6"></p>
+            <div class="flex space-x-4">
+                <button id="confirm-yes" class="flex-1 bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition duration-200">
+                    Yes
+                </button>
+                <button id="confirm-no" class="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400 transition duration-200">
+                    No
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Spinner -->
+    <div id="loading-spinner" class="fixed inset-0 bg-gray-600 bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 flex items-center">
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-4"></div>
+            <span class="text-gray-700">Processing...</span>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Button Test</title>
+    <style>
+        body { padding: 20px; font-family: Arial, sans-serif; }
+        .test-button { 
+            padding: 10px 20px; 
+            margin: 10px; 
+            background: #3b82f6; 
+            color: white; 
+            border: none; 
+            border-radius: 5px; 
+            cursor: pointer;
+        }
+        .test-button:hover { background: #2563eb; }
+        .log { 
+            background: #f3f4f6; 
+            padding: 10px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            font-family: monospace;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Button Functionality Test</h1>
+    
+    <div>
+        <button class="test-button" id="test-btn-1">Test Button 1</button>
+        <button class="test-button" id="test-btn-2">Test Button 2</button>
+        <button class="test-button" id="test-btn-3">Alert Test</button>
+        <button class="test-button" id="fetch-test">Fetch Test</button>
+    </div>
+    
+    <div class="log" id="log"></div>
+    
+    <h2>Form Test</h2>
+    <form id="test-form">
+        <input type="text" placeholder="Enter some text" id="test-input" style="padding: 8px; margin: 5px;">
+        <button type="submit" class="test-button">Submit Form</button>
+    </form>
+    
+    <h2>Socket.IO Test</h2>
+    <button class="test-button" id="socket-test">Test Socket Connection</button>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message) {
+            const now = new Date().toLocaleTimeString();
+            log.innerHTML += `[${now}] ${message}<br>`;
+            log.scrollTop = log.scrollHeight;
+            console.log(message);
+        }
+        
+        addLog('Page loaded successfully');
+        
+        // Test basic button clicks
+        document.getElementById('test-btn-1').addEventListener('click', () => {
+            addLog('Button 1 clicked!');
+        });
+        
+        document.getElementById('test-btn-2').addEventListener('click', () => {
+            addLog('Button 2 clicked!');
+        });
+        
+        document.getElementById('test-btn-3').addEventListener('click', () => {
+            alert('Alert test successful!');
+            addLog('Alert button clicked');
+        });
+        
+        // Test form submission
+        document.getElementById('test-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const input = document.getElementById('test-input');
+            addLog(`Form submitted with value: ${input.value}`);
+            input.value = '';
+        });
+        
+        // Test fetch functionality
+        document.getElementById('fetch-test').addEventListener('click', async () => {
+            addLog('Testing fetch...');
+            try {
+                const response = await fetch('/api/conversations');
+                const data = await response.json();
+                addLog(`Fetch successful: ${response.status} - ${JSON.stringify(data).substring(0, 100)}...`);
+            } catch (error) {
+                addLog(`Fetch error: ${error.message}`);
+            }
+        });
+        
+        // Test Socket.IO
+        document.getElementById('socket-test').addEventListener('click', () => {
+            addLog('Testing socket connection...');
+            try {
+                const socket = io();
+                
+                socket.on('connect', () => {
+                    addLog('Socket connected successfully!');
+                });
+                
+                socket.on('connected', (data) => {
+                    addLog(`Server response: ${JSON.stringify(data)}`);
+                });
+                
+                socket.on('connect_error', (error) => {
+                    addLog(`Socket connection error: ${error.message}`);
+                });
+                
+            } catch (error) {
+                addLog(`Socket error: ${error.message}`);
+            }
+        });
+        
+        // Test if JavaScript is working
+        addLog('JavaScript is working properly');
+        
+        // Check for common issues
+        setTimeout(() => {
+            addLog('Delayed execution test passed');
+        }, 1000);
+        
+        // Check if DOM elements are accessible
+        const elements = [
+            'test-btn-1', 'test-btn-2', 'test-btn-3', 
+            'fetch-test', 'test-form', 'socket-test'
+        ];
+        
+        elements.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                addLog(`✓ Element found: ${id}`);
+            } else {
+                addLog(`✗ Element missing: ${id}`);
+            }
+        });
+        
+    </script>
+</body>
+</html>

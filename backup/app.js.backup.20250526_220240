@@ -1,0 +1,941 @@
+// Enhanced Legal Research Assistant with Conversation Memory
+class LegalResearchApp {
+    constructor() {
+        this.socket = io();
+        this.currentConversationId = null;
+        this.conversations = [];
+        this.currentFilter = 'all';
+        this.currentResults = null;
+        
+        this.progressSteps = [
+            { id: 1, name: 'Extract Arguments', progress: 15 },
+            { id: 2, name: 'Generate Keywords', progress: 30 },
+            { id: 3, name: 'Search Sources', progress: 50 },
+            { id: 4, name: 'Chain Citations', progress: 70 },
+            { id: 5, name: 'Score Sources', progress: 85 }
+        ];
+        
+        this.init();
+    }
+
+    init() {
+        this.bindEvents();
+        this.setupSocketListeners();
+        this.setupTabs();
+        this.loadConversations();
+    }
+
+    bindEvents() {
+        // Sidebar events
+        document.getElementById('new-research-btn').addEventListener('click', () => this.startNewResearch());
+        document.getElementById('start-new-research').addEventListener('click', () => this.startNewResearch());
+        document.getElementById('new-research-from-results').addEventListener('click', () => this.startNewResearch());
+        document.getElementById('toggle-sidebar').addEventListener('click', () => this.toggleSidebar());
+        document.getElementById('cancel-research').addEventListener('click', () => this.showWelcomeScreen());
+
+        // Form events
+        document.getElementById('researchForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.startResearch();
+        });
+
+        // Search and filter events
+        document.getElementById('search-conversations').addEventListener('input', (e) => {
+            this.filterConversations(e.target.value);
+        });
+
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                this.setActiveFilter(e.target.dataset.filter);
+            });
+        });
+
+        // Modal events
+        document.getElementById('close-error').addEventListener('click', () => this.hideErrorModal());
+        document.getElementById('confirm-yes').addEventListener('click', () => this.confirmAction());
+        document.getElementById('confirm-no').addEventListener('click', () => this.hideConfirmModal());
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', (e) => {
+                const tabId = e.target.closest('.tab-button').dataset.tab;
+                this.switchTab(tabId);
+            });
+        });
+
+        // Action buttons
+        document.getElementById('save-research-btn')?.addEventListener('click', () => this.saveResearch());
+        document.getElementById('export-research-btn')?.addEventListener('click', () => this.exportResearch());
+        document.getElementById('share-research-btn')?.addEventListener('click', () => this.shareResearch());
+    }
+
+    setupSocketListeners() {
+        this.socket.on('connected', (data) => {
+            console.log('Connected to server:', data);
+        });
+
+        this.socket.on('research_progress', (data) => {
+            this.updateProgress(data);
+        });
+
+        this.socket.on('research_complete', (data) => {
+            this.handleResearchComplete(data);
+        });
+
+        this.socket.on('research_error', (data) => {
+            this.handleResearchError(data);
+        });
+    }
+
+    setupTabs() {
+        this.switchTab('arguments');
+    }
+
+    async loadConversations() {
+        try {
+            document.getElementById('loading-conversations').style.display = 'flex';
+            
+            const response = await fetch('/api/conversations');
+            if (!response.ok) throw new Error('Failed to load conversations');
+            
+            this.conversations = await response.json();
+            this.renderConversations();
+            this.updateConversationCount();
+            
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            this.showError('Failed to load conversation history');
+        } finally {
+            document.getElementById('loading-conversations').style.display = 'none';
+        }
+    }
+
+    renderConversations() {
+        const container = document.getElementById('conversations-list');
+        const loadingElement = document.getElementById('loading-conversations');
+        
+        // Clear existing conversations (except loading element)
+        const existingConversations = container.querySelectorAll('.conversation-item');
+        existingConversations.forEach(item => item.remove());
+
+        if (this.conversations.length === 0) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'text-center py-8 text-gray-500';
+            emptyState.innerHTML = `
+                <i class="fas fa-history text-3xl mb-2"></i>
+                <p>No conversations yet</p>
+                <p class="text-sm">Start your first research!</p>
+            `;
+            container.appendChild(emptyState);
+            return;
+        }
+
+        const filteredConversations = this.getFilteredConversations();
+        
+        filteredConversations.forEach(conversation => {
+            const conversationElement = this.createConversationElement(conversation);
+            container.insertBefore(conversationElement, loadingElement);
+        });
+    }
+
+    getFilteredConversations() {
+        let filtered = this.conversations;
+        
+        // Apply filter
+        if (this.currentFilter === 'favorites') {
+            filtered = filtered.filter(conv => conv.is_favorite);
+        }
+        
+        // Apply search
+        const searchTerm = document.getElementById('search-conversations').value.toLowerCase();
+        if (searchTerm) {
+            filtered = filtered.filter(conv => 
+                conv.title.toLowerCase().includes(searchTerm) ||
+                conv.research_angle.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        return filtered;
+    }
+
+    createConversationElement(conversation) {
+        const div = document.createElement('div');
+        div.className = 'conversation-item p-3 rounded-lg cursor-pointer relative group';
+        div.dataset.conversationId = conversation.id;
+        
+        const date = new Date(conversation.created_at).toLocaleDateString();
+        const statusColor = conversation.status === 'completed' ? 'text-green-600' : 
+                          conversation.status === 'running' ? 'text-blue-600' : 'text-red-600';
+        
+        div.innerHTML = `
+            <div class="flex items-start justify-between">
+                <div class="flex-1 min-w-0">
+                    <h4 class="font-medium text-gray-900 truncate">${conversation.title}</h4>
+                    <p class="text-sm text-gray-600 mt-1 line-clamp-2">${conversation.research_angle}</p>
+                    <div class="flex items-center mt-2 text-xs text-gray-500">
+                        <i class="fas fa-calendar mr-1"></i>
+                        <span>${date}</span>
+                        <span class="ml-2 ${statusColor}">
+                            <i class="fas fa-circle text-xs mr-1"></i>
+                            ${conversation.status}
+                        </span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button class="favorite-btn p-1 hover:bg-gray-200 rounded" 
+                            data-conversation-id="${conversation.id}"
+                            title="${conversation.is_favorite ? 'Remove from favorites' : 'Add to favorites'}">
+                        <i class="fas fa-star ${conversation.is_favorite ? 'text-yellow-500' : 'text-gray-400'}"></i>
+                    </button>
+                    <button class="delete-btn p-1 hover:bg-gray-200 rounded" 
+                            data-conversation-id="${conversation.id}"
+                            title="Delete conversation">
+                        <i class="fas fa-trash text-red-500"></i>
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Add event listeners
+        div.addEventListener('click', (e) => {
+            if (!e.target.closest('.favorite-btn') && !e.target.closest('.delete-btn')) {
+                this.loadConversation(conversation.id);
+            }
+        });
+        
+        const favoriteBtn = div.querySelector('.favorite-btn');
+        favoriteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.toggleFavorite(conversation.id);
+        });
+        
+        const deleteBtn = div.querySelector('.delete-btn');
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.confirmDeleteConversation(conversation.id);
+        });
+        
+        return div;
+    }
+
+    async loadConversation(conversationId) {
+        try {
+            this.showLoadingSpinner();
+            
+            const response = await fetch(`/api/conversation/${conversationId}`);
+            if (!response.ok) throw new Error('Failed to load conversation');
+            
+            const conversation = await response.json();
+            this.currentConversationId = conversationId;
+            
+            // Update active conversation in sidebar
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelector(`[data-conversation-id="${conversationId}"]`)?.classList.add('active');
+            
+            // Load conversation data into form or results
+            if (conversation.results) {
+                this.displayConversationResults(conversation);
+            } else {
+                this.displayConversationForm(conversation);
+            }
+            
+        } catch (error) {
+            console.error('Error loading conversation:', error);
+            this.showError('Failed to load conversation');
+        } finally {
+            this.hideLoadingSpinner();
+        }
+    }
+
+    displayConversationForm(conversation) {
+        document.getElementById('welcome-screen').classList.add('hidden');
+        document.getElementById('research-form').classList.remove('hidden');
+        document.getElementById('results-section').classList.add('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        
+        document.getElementById('form-title').textContent = 'Continue Research';
+        document.getElementById('paper-content').value = conversation.paper_content;
+        document.getElementById('research-angle').value = conversation.research_angle;
+    }
+
+    displayConversationResults(conversation) {
+        document.getElementById('welcome-screen').classList.add('hidden');
+        document.getElementById('research-form').classList.add('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        document.getElementById('results-section').classList.remove('hidden');
+        
+        this.currentResults = conversation.results;
+        this.populateResults(conversation.results);
+    }
+
+    async toggleFavorite(conversationId) {
+        try {
+            const response = await fetch(`/api/conversation/${conversationId}/favorite`, {
+                method: 'POST'
+            });
+            
+            if (!response.ok) throw new Error('Failed to toggle favorite');
+            
+            const result = await response.json();
+            
+            // Update local data
+            const conversation = this.conversations.find(c => c.id === conversationId);
+            if (conversation) {
+                conversation.is_favorite = result.is_favorite;
+                this.renderConversations();
+            }
+            
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            this.showError('Failed to update favorite status');
+        }
+    }
+
+    confirmDeleteConversation(conversationId) {
+        this.pendingDeleteId = conversationId;
+        const conversation = this.conversations.find(c => c.id === conversationId);
+        this.showConfirmModal(
+            `Are you sure you want to delete "${conversation?.title}"?`,
+            () => this.deleteConversation(conversationId)
+        );
+    }
+
+    async deleteConversation(conversationId) {
+        try {
+            const response = await fetch(`/api/conversation/${conversationId}`, {
+                method: 'DELETE'
+            });
+            
+            if (!response.ok) throw new Error('Failed to delete conversation');
+            
+            // Remove from local data
+            this.conversations = this.conversations.filter(c => c.id !== conversationId);
+            this.renderConversations();
+            this.updateConversationCount();
+            
+            // If this was the active conversation, show welcome screen
+            if (this.currentConversationId === conversationId) {
+                this.showWelcomeScreen();
+                this.currentConversationId = null;
+            }
+            
+        } catch (error) {
+            console.error('Error deleting conversation:', error);
+            this.showError('Failed to delete conversation');
+        }
+    }
+
+    startNewResearch() {
+        this.currentConversationId = null;
+        document.getElementById('welcome-screen').classList.add('hidden');
+        document.getElementById('research-form').classList.remove('hidden');
+        document.getElementById('results-section').classList.add('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        
+        document.getElementById('form-title').textContent = 'Start New Research';
+        document.getElementById('paper-content').value = '';
+        document.getElementById('research-angle').value = '';
+        
+        // Clear active conversation
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.classList.remove('active');
+        });
+    }
+
+    showWelcomeScreen() {
+        document.getElementById('welcome-screen').classList.remove('hidden');
+        document.getElementById('research-form').classList.add('hidden');
+        document.getElementById('results-section').classList.add('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        
+        // Clear active conversation
+        document.querySelectorAll('.conversation-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        this.currentConversationId = null;
+    }
+
+    async startResearch() {
+        const paperContent = document.getElementById('paper-content').value.trim();
+        const researchAngle = document.getElementById('research-angle').value.trim();
+
+        if (!paperContent || !researchAngle) {
+            this.showError('Please fill in both paper content and research angle.');
+            return;
+        }
+
+        try {
+            this.showLoadingSpinner();
+            
+            const requestData = {
+                paper_content: paperContent,
+                research_angle: researchAngle
+            };
+            
+            if (this.currentConversationId) {
+                requestData.conversation_id = this.currentConversationId;
+            }
+            
+            const response = await fetch('/api/research', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestData)
+            });
+
+            const result = await response.json();
+            
+            this.hideLoadingSpinner();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Failed to start research');
+            }
+
+            this.currentConversationId = result.conversation_id;
+            
+            // Hide form and show progress
+            document.getElementById('research-form').classList.add('hidden');
+            document.getElementById('progress-section').classList.remove('hidden');
+            
+            // Reset progress
+            this.resetProgress();
+            
+            // Reload conversations to show the new/updated one
+            this.loadConversations();
+
+        } catch (error) {
+            this.hideLoadingSpinner();
+            this.showError(error.message);
+        }
+    }
+
+    updateProgress(data) {
+        document.getElementById('progress-bar').style.width = `${data.progress}%`;
+        document.getElementById('progress-percentage').textContent = `${data.progress}%`;
+        document.getElementById('current-step').textContent = data.current_step;
+        this.updateStepIndicators(data.progress);
+    }
+
+    updateStepIndicators(progress) {
+        const steps = document.querySelectorAll('.progress-step');
+        
+        steps.forEach((step, index) => {
+            const stepData = this.progressSteps[index];
+            
+            if (progress >= stepData.progress) {
+                step.classList.add('completed');
+                step.classList.remove('active');
+            } else if (progress > (stepData.progress - 15)) {
+                step.classList.add('active');
+                step.classList.remove('completed');
+            } else {
+                step.classList.remove('active', 'completed');
+            }
+        });
+    }
+
+    handleResearchComplete(data) {
+        this.currentResults = data;
+        
+        // Hide progress section and show results
+        document.getElementById('progress-section').classList.add('hidden');
+        document.getElementById('results-section').classList.remove('hidden');
+        
+        // Populate results
+        this.populateResults(data);
+        
+        // Reload conversations to update status
+        this.loadConversations();
+    }
+
+    handleResearchError(data) {
+        this.showError(data.error || 'An error occurred during research');
+        this.resetUI();
+        this.loadConversations(); // Reload to update status
+    }
+
+    populateResults(data) {
+        this.updateSummaryCards(data);
+        this.populateArgumentsTab(data);
+        this.populateKeywordsTab(data);
+        this.populateSourcesTab(data);
+        this.populateAnalysisTab(data);
+    }
+
+    updateSummaryCards(data) {
+        document.getElementById('total-sources').textContent = data.sources?.length || 0;
+        document.getElementById('total-keywords').textContent = data.keywords?.length || 0;
+        
+        const totalCitations = data.sources?.reduce((sum, source) => sum + (source.citations || 0), 0) || 0;
+        document.getElementById('total-citations').textContent = totalCitations;
+        
+        const avgScore = data.sources?.length > 0 ? 
+            (data.sources.reduce((sum, source) => sum + (source.relevance_score || 0), 0) / data.sources.length).toFixed(1) : 
+            '0.0';
+        document.getElementById('avg-score').textContent = avgScore;
+    }
+
+    populateArgumentsTab(data) {
+        const argumentsContainer = document.getElementById('base-arguments');
+        const analysisContainer = document.getElementById('research-analysis');
+        
+        argumentsContainer.innerHTML = '';
+        analysisContainer.innerHTML = '';
+        
+        if (data.base_arguments && typeof data.base_arguments === 'object') {
+            Object.entries(data.base_arguments).forEach(([key, value]) => {
+                const card = this.createArgumentCard(key, value);
+                argumentsContainer.appendChild(card);
+            });
+        }
+        
+        if (data.research_analysis && typeof data.research_analysis === 'object') {
+            Object.entries(data.research_analysis).forEach(([key, value]) => {
+                const card = this.createArgumentCard(key, value);
+                analysisContainer.appendChild(card);
+            });
+        }
+    }
+
+    populateKeywordsTab(data) {
+        const keywordsContainer = document.getElementById('keywords-list');
+        keywordsContainer.innerHTML = '';
+        
+        if (data.keywords && Array.isArray(data.keywords)) {
+            data.keywords.forEach(keyword => {
+                const keywordElement = document.createElement('div');
+                keywordElement.className = 'bg-gray-100 rounded-lg p-4 text-center hover:bg-gray-200 transition-colors';
+                
+                if (typeof keyword === 'object') {
+                    keywordElement.innerHTML = `
+                        <div class="font-medium text-gray-800">${keyword.term || keyword.keyword || 'Unknown'}</div>
+                        <div class="text-sm text-gray-600 mt-1">Score: ${(keyword.relevance_score || keyword.score || 0).toFixed(2)}</div>
+                    `;
+                } else {
+                    keywordElement.innerHTML = `
+                        <div class="font-medium text-gray-800">${keyword}</div>
+                    `;
+                }
+                
+                keywordsContainer.appendChild(keywordElement);
+            });
+        }
+    }
+
+    populateSourcesTab(data) {
+        const sourcesContainer = document.getElementById('sources-list');
+        sourcesContainer.innerHTML = '';
+        
+        if (data.sources && Array.isArray(data.sources)) {
+            data.sources.forEach(source => {
+                const sourceCard = this.createSourceCard(source);
+                sourcesContainer.appendChild(sourceCard);
+            });
+        }
+    }
+
+    populateAnalysisTab(data) {
+        const analysisContainer = document.getElementById('analysis-content');
+        analysisContainer.innerHTML = '';
+        
+        // Create analysis summary card
+        const summaryCard = document.createElement('div');
+        summaryCard.className = 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg p-6 mb-6';
+        summaryCard.innerHTML = `
+            <h4 class="text-xl font-semibold mb-4">Research Summary</h4>
+            <p class="mb-4">Your research analysis has been completed with comprehensive source evaluation and citation analysis.</p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${data.sources?.length || 0}</div>
+                    <div class="text-sm opacity-90">Total Sources</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${data.keywords?.length || 0}</div>
+                    <div class="text-sm opacity-90">Keywords Generated</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${data.summary?.key_themes?.length || 0}</div>
+                    <div class="text-sm opacity-90">Key Themes</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-2xl font-bold">${new Date(data.timestamp || Date.now()).toLocaleDateString()}</div>
+                    <div class="text-sm opacity-90">Research Date</div>
+                </div>
+            </div>
+        `;
+        
+        analysisContainer.appendChild(summaryCard);
+        
+        // Add detailed analysis if available
+        if (data.summary) {
+            const detailsCard = document.createElement('div');
+            detailsCard.className = 'bg-white rounded-lg p-6 shadow-sm border';
+            detailsCard.innerHTML = `
+                <h4 class="text-lg font-semibold mb-4">Research Details</h4>
+                <div class="space-y-4">
+                    <div>
+                        <h5 class="font-medium text-gray-700 mb-2">Key Themes:</h5>
+                        <p class="text-gray-600">${data.summary.key_themes?.join(', ') || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <h5 class="font-medium text-gray-700 mb-2">Research Focus:</h5>
+                        <p class="text-gray-600">${data.summary.research_focus?.join(', ') || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <h5 class="font-medium text-gray-700 mb-2">Source Types:</h5>
+                        <p class="text-gray-600">${data.summary.top_source_types?.join(', ') || 'N/A'}</p>
+                    </div>
+                </div>
+            `;
+            
+            analysisContainer.appendChild(detailsCard);
+        }
+    }
+
+    createArgumentCard(title, content) {
+        const card = document.createElement('div');
+        card.className = 'bg-gray-50 rounded-lg p-4 border';
+        
+        let contentHtml = '';
+        if (Array.isArray(content)) {
+            contentHtml = '<ul class="list-disc ml-4 space-y-1">' + 
+                         content.map(item => `<li class="text-gray-700">${item}</li>`).join('') + 
+                         '</ul>';
+        } else if (typeof content === 'object') {
+            contentHtml = `<pre class="text-sm text-gray-700 whitespace-pre-wrap">${JSON.stringify(content, null, 2)}</pre>`;
+        } else {
+            contentHtml = `<p class="text-gray-700">${content}</p>`;
+        }
+        
+        card.innerHTML = `
+            <h4 class="font-semibold text-gray-800 mb-2 capitalize">${title.replace(/_/g, ' ')}</h4>
+            <div>${contentHtml}</div>
+        `;
+        
+        return card;
+    }
+
+    createSourceCard(source) {
+        const card = document.createElement('div');
+        card.className = 'bg-white rounded-lg p-6 shadow-sm border hover:shadow-md transition-shadow';
+        
+        const score = source.relevance_score || 0;
+        const scoreClass = score >= 0.7 ? 'bg-green-100 text-green-800' : 
+                          score >= 0.4 ? 'bg-yellow-100 text-yellow-800' : 
+                          'bg-red-100 text-red-800';
+        
+        card.innerHTML = `
+            <div class="flex justify-between items-start mb-3">
+                <h4 class="font-semibold text-gray-800 flex-1 pr-4">${source.title || 'Untitled Source'}</h4>
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${scoreClass}">
+                    ${score.toFixed(2)}
+                </span>
+            </div>
+            
+            ${source.url ? `
+                <a href="${source.url}" target="_blank" class="text-blue-600 hover:text-blue-800 text-sm mb-3 block break-all">
+                    <i class="fas fa-external-link-alt mr-1"></i>${source.url}
+                </a>
+            ` : ''}
+            
+            <p class="text-gray-600 text-sm mb-4 line-clamp-3">${source.content || 'No content available'}</p>
+            
+            <div class="flex flex-wrap gap-4 text-xs text-gray-500 mb-4">
+                ${source.date ? `
+                    <div class="flex items-center">
+                        <i class="fas fa-calendar mr-1"></i>
+                        ${new Date(source.date).toLocaleDateString()}
+                    </div>
+                ` : ''}
+                ${source.citations ? `
+                    <div class="flex items-center">
+                        <i class="fas fa-quote-left mr-1"></i>
+                        ${source.citations} citations
+                    </div>
+                ` : ''}
+                <div class="flex items-center">
+                    <i class="fas fa-link mr-1"></i>
+                    ${source.url ? 'External Link' : 'Internal'}
+                </div>
+            </div>
+            
+            ${source.reasoning && Object.keys(source.reasoning).length > 0 ? `
+                <div class="bg-gray-50 rounded-md p-3">
+                    <h5 class="font-medium text-gray-700 mb-2 text-sm">Relevance Reasoning:</h5>
+                    <div class="text-xs text-gray-600 space-y-1">
+                        ${Object.entries(source.reasoning).map(([key, value]) => `
+                            <div><strong>${key}:</strong> ${value}</div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+        `;
+        
+        return card;
+    }
+
+    switchTab(tabId) {
+        // Update tab buttons
+        document.querySelectorAll('.tab-button').forEach(btn => {
+            btn.classList.remove('active', 'border-blue-500', 'text-blue-600');
+            btn.classList.add('text-gray-500', 'hover:text-gray-700');
+        });
+        
+        const activeBtn = document.querySelector(`[data-tab="${tabId}"]`);
+        if (activeBtn) {
+            activeBtn.classList.remove('text-gray-500', 'hover:text-gray-700');
+            activeBtn.classList.add('active', 'border-blue-500', 'text-blue-600');
+        }
+        
+        // Update tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.add('hidden');
+        });
+        
+        const activeContent = document.getElementById(`${tabId}-tab`);
+        if (activeContent) {
+            activeContent.classList.remove('hidden');
+        }
+    }
+
+    setActiveFilter(filter) {
+        this.currentFilter = filter;
+        
+        // Update filter tab appearance
+        document.querySelectorAll('.filter-tab').forEach(tab => {
+            tab.classList.remove('active', 'bg-blue-100', 'text-blue-700');
+            tab.classList.add('text-gray-500', 'hover:text-gray-700');
+        });
+        
+        const activeTab = document.querySelector(`[data-filter="${filter}"]`);
+        if (activeTab) {
+            activeTab.classList.remove('text-gray-500', 'hover:text-gray-700');
+            activeTab.classList.add('active', 'bg-blue-100', 'text-blue-700');
+        }
+        
+        this.renderConversations();
+    }
+
+    filterConversations(searchTerm) {
+        this.renderConversations();
+    }
+
+    updateConversationCount() {
+        document.getElementById('total-conversations').textContent = this.conversations.length;
+    }
+
+    toggleSidebar() {
+        const sidebar = document.getElementById('sidebar');
+        sidebar.classList.toggle('-translate-x-full');
+    }
+
+    resetProgress() {
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-percentage').textContent = '0%';
+        document.getElementById('current-step').textContent = 'Initializing...';
+        
+        document.querySelectorAll('.progress-step').forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+    }
+
+    resetUI() {
+        document.getElementById('research-form').classList.remove('hidden');
+        document.getElementById('progress-section').classList.add('hidden');
+        document.getElementById('results-section').classList.add('hidden');
+        this.resetProgress();
+    }
+
+    // Action methods
+    async saveResearch() {
+        if (!this.currentResults) {
+            this.showError('No research results to save');
+            return;
+        }
+        
+        try {
+            // Research is automatically saved when completed
+            this.showSuccessMessage('Research results are automatically saved!');
+        } catch (error) {
+            this.showError('Failed to save research');
+        }
+    }
+
+    async exportResearch() {
+        if (!this.currentResults) {
+            this.showError('No research results to export');
+            return;
+        }
+        
+        try {
+            const exportData = {
+                conversation_id: this.currentResults.conversation_id,
+                timestamp: this.currentResults.timestamp,
+                base_arguments: this.currentResults.base_arguments,
+                research_analysis: this.currentResults.research_analysis,
+                keywords: this.currentResults.keywords,
+                sources: this.currentResults.sources,
+                summary: this.currentResults.summary
+            };
+            
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], 
+                                { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `legal_research_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            this.showSuccessMessage('Research results exported successfully!');
+        } catch (error) {
+            this.showError('Failed to export research results');
+        }
+    }
+
+    async shareResearch() {
+        if (!this.currentResults) {
+            this.showError('No research results to share');
+            return;
+        }
+        
+        try {
+            const shareUrl = `${window.location.origin}/?conversation=${this.currentResults.conversation_id}`;
+            
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Legal Research Results',
+                    text: 'Check out these legal research results',
+                    url: shareUrl
+                });
+            } else {
+                // Fallback: copy to clipboard
+                await navigator.clipboard.writeText(shareUrl);
+                this.showSuccessMessage('Research link copied to clipboard!');
+            }
+        } catch (error) {
+            this.showError('Failed to share research results');
+        }
+    }
+
+    // Modal methods
+    showError(message) {
+        document.getElementById('error-message').textContent = message;
+        document.getElementById('error-modal').classList.remove('hidden');
+        document.getElementById('error-modal').classList.add('flex');
+    }
+
+    hideErrorModal() {
+        document.getElementById('error-modal').classList.add('hidden');
+        document.getElementById('error-modal').classList.remove('flex');
+    }
+
+    showConfirmModal(message, callback) {
+        this.pendingConfirmCallback = callback;
+        document.getElementById('confirm-message').textContent = message;
+        document.getElementById('confirm-modal').classList.remove('hidden');
+        document.getElementById('confirm-modal').classList.add('flex');
+    }
+
+    hideConfirmModal() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        document.getElementById('confirm-modal').classList.remove('flex');
+        this.pendingConfirmCallback = null;
+    }
+
+    confirmAction() {
+        if (this.pendingConfirmCallback) {
+            this.pendingConfirmCallback();
+        }
+        this.hideConfirmModal();
+    }
+
+    showLoadingSpinner() {
+        document.getElementById('loading-spinner').classList.remove('hidden');
+        document.getElementById('loading-spinner').classList.add('flex');
+    }
+
+    hideLoadingSpinner() {
+        document.getElementById('loading-spinner').classList.add('hidden');
+        document.getElementById('loading-spinner').classList.remove('flex');
+    }
+
+    showSuccessMessage(message) {
+        // Create a temporary success notification
+        const successDiv = document.createElement('div');
+        successDiv.className = 'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 fade-in';
+        successDiv.innerHTML = `
+            <div class="flex items-center">
+                <i class="fas fa-check-circle mr-2"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        document.body.appendChild(successDiv);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.style.opacity = '0';
+                setTimeout(() => successDiv.remove(), 300);
+            }
+        }, 3000);
+    }
+}
+
+// CSS styles for tab buttons
+const style = document.createElement('style');
+style.textContent = `
+    .tab-button {
+        padding: 1rem 1.5rem;
+        border-bottom: 2px solid transparent;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        border: none;
+        background: none;
+        outline: none;
+    }
+    
+    .tab-button:hover {
+        background-color: #f9fafb;
+    }
+    
+    .tab-button.active {
+        border-bottom-color: #3b82f6;
+        color: #3b82f6;
+    }
+    
+    .filter-tab {
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .filter-tab.active {
+        background-color: #dbeafe;
+        color: #1d4ed8;
+    }
+    
+    .line-clamp-2 {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .line-clamp-3 {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+`;
+document.head.appendChild(style);
+
+// Initialize the application when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    new LegalResearchApp();
+});
